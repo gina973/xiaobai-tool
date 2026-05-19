@@ -178,6 +178,22 @@ def build_excel(products, images_map):
 
 # ── Routes ────────────────────────────────────────────────────
 
+@app.route('/api/proxy-image')
+def proxy_image():
+    """讓伺服器代替瀏覽器去抓圖片，解決 CORS 問題"""
+    url = request.args.get('url', '')
+    if not url:
+        return '', 400
+    try:
+        resp = requests.get(url, timeout=15, headers={'User-Agent': 'Mozilla/5.0'})
+        resp.raise_for_status()
+        return resp.content, 200, {
+            'Content-Type': resp.headers.get('Content-Type', 'image/png'),
+            'Access-Control-Allow-Origin': '*'
+        }
+    except Exception as e:
+        return str(e), 500
+
 @app.route('/')
 def index():
     return render_template('index.html')

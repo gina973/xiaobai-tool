@@ -526,7 +526,9 @@ document.getElementById('btn-generate').addEventListener('click', async () => {
   for (const p of productsData) {
     if (!p.img_url) continue;
     try {
-      const imgRes = await fetch(p.img_url, {mode: 'cors', credentials: 'omit'});
+      // 透過伺服器 proxy 抓圖，避免 CORS 問題
+      const proxyUrl = `/api/proxy-image?url=${encodeURIComponent(p.img_url)}`;
+      const imgRes = await fetch(proxyUrl);
       if (imgRes.ok) {
         const blob = await imgRes.blob();
         fd.append(`img_${p.style}`, blob, `${p.style}.png`);
