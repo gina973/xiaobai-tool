@@ -1,0 +1,568 @@
+<!DOCTYPE html>
+<html lang="zh-TW">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>商品上架結構表產生器</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Noto+Sans+TC:wght@300;400;500;700&family=DM+Mono:wght@400;500&display=swap" rel="stylesheet">
+<style>
+  :root {
+    --bg: #f5f4f0;
+    --surface: #ffffff;
+    --surface2: #f0ede6;
+    --border: #ddd9d0;
+    --accent: #2d5a3d;
+    --accent-light: #e8f0ea;
+    --accent2: #c8a96e;
+    --text: #1a1a1a;
+    --text-muted: #888880;
+    --danger: #c0392b;
+    --success: #27ae60;
+    --radius: 12px;
+    --shadow: 0 2px 12px rgba(0,0,0,0.08);
+  }
+
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+
+  body {
+    font-family: 'Noto Sans TC', sans-serif;
+    background: var(--bg);
+    color: var(--text);
+    min-height: 100vh;
+  }
+
+  header {
+    background: var(--accent);
+    padding: 0 40px;
+    height: 64px;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+  }
+  .logo {
+    color: #fff;
+    font-size: 16px;
+    font-weight: 700;
+    letter-spacing: 0.05em;
+    display: flex;
+    align-items: center;
+    gap: 10px;
+  }
+  .logo-icon {
+    width: 32px; height: 32px;
+    background: var(--accent2);
+    border-radius: 8px;
+    display: flex; align-items: center; justify-content: center;
+    font-size: 16px;
+  }
+  .header-sub {
+    color: rgba(255,255,255,0.6);
+    font-size: 13px;
+    font-family: 'DM Mono', monospace;
+  }
+
+  .container {
+    max-width: 900px;
+    margin: 0 auto;
+    padding: 40px 24px 80px;
+  }
+
+  /* Steps */
+  .steps {
+    display: flex;
+    gap: 0;
+    margin-bottom: 40px;
+    background: var(--surface);
+    border-radius: var(--radius);
+    border: 1px solid var(--border);
+    overflow: hidden;
+  }
+  .step {
+    flex: 1;
+    padding: 16px 20px;
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    border-right: 1px solid var(--border);
+    transition: background 0.2s;
+  }
+  .step:last-child { border-right: none; }
+  .step.active { background: var(--accent-light); }
+  .step.done { background: var(--accent-light); }
+  .step-num {
+    width: 28px; height: 28px;
+    border-radius: 50%;
+    background: var(--border);
+    color: var(--text-muted);
+    font-size: 13px; font-weight: 700;
+    display: flex; align-items: center; justify-content: center;
+    flex-shrink: 0;
+    transition: all 0.2s;
+  }
+  .step.active .step-num { background: var(--accent); color: #fff; }
+  .step.done .step-num { background: var(--success); color: #fff; }
+  .step-text { font-size: 13px; font-weight: 500; color: var(--text-muted); }
+  .step.active .step-text, .step.done .step-text { color: var(--text); }
+
+  /* Cards */
+  .card {
+    background: var(--surface);
+    border-radius: var(--radius);
+    border: 1px solid var(--border);
+    box-shadow: var(--shadow);
+    padding: 28px;
+    margin-bottom: 20px;
+  }
+  .card-title {
+    font-size: 15px; font-weight: 700;
+    margin-bottom: 4px;
+    display: flex; align-items: center; gap: 8px;
+  }
+  .card-title span { font-size: 18px; }
+  .card-desc {
+    font-size: 13px; color: var(--text-muted);
+    margin-bottom: 20px;
+    line-height: 1.6;
+  }
+
+  /* Upload zone */
+  .upload-zone {
+    border: 2px dashed var(--border);
+    border-radius: var(--radius);
+    padding: 36px 24px;
+    text-align: center;
+    cursor: pointer;
+    transition: all 0.2s;
+    position: relative;
+  }
+  .upload-zone:hover, .upload-zone.drag-over {
+    border-color: var(--accent);
+    background: var(--accent-light);
+  }
+  .upload-zone input[type="file"] {
+    position: absolute; inset: 0; opacity: 0; cursor: pointer; width: 100%; height: 100%;
+  }
+  .upload-icon { font-size: 36px; margin-bottom: 12px; }
+  .upload-text { font-size: 14px; font-weight: 600; margin-bottom: 4px; }
+  .upload-sub { font-size: 12px; color: var(--text-muted); }
+
+  .file-badge {
+    display: inline-flex; align-items: center; gap: 8px;
+    background: var(--accent-light);
+    border: 1px solid var(--accent);
+    border-radius: 8px;
+    padding: 8px 14px;
+    font-size: 13px; font-weight: 500;
+    color: var(--accent);
+    margin-top: 12px;
+  }
+
+  /* Preview table */
+  .preview-wrap { overflow-x: auto; margin-top: 8px; }
+  table { width: 100%; border-collapse: collapse; font-size: 13px; }
+  th {
+    background: var(--accent); color: #fff;
+    padding: 10px 12px; text-align: left; font-weight: 600;
+    font-size: 12px; letter-spacing: 0.03em;
+  }
+  th:first-child { border-radius: 8px 0 0 0; }
+  th:last-child  { border-radius: 0 8px 0 0; }
+  td { padding: 9px 12px; border-bottom: 1px solid var(--border); vertical-align: middle; }
+  tr:hover td { background: var(--surface2); }
+  .badge {
+    display: inline-block; padding: 2px 8px; border-radius: 20px;
+    font-size: 11px; font-weight: 700; letter-spacing: 0.04em;
+  }
+  .badge-a { background: #fef3c7; color: #92400e; }
+  .badge-b { background: #dbeafe; color: #1e40af; }
+  .badge-c { background: #f3e8ff; color: #7c3aed; }
+  .badge-other { background: var(--surface2); color: var(--text-muted); }
+
+  /* 圖片縮圖 */
+  .img-thumb {
+    width: 40px; height: 50px;
+    object-fit: cover;
+    border-radius: 4px;
+    border: 1px solid var(--border);
+  }
+  .img-placeholder {
+    width: 40px; height: 50px;
+    background: var(--surface2);
+    border-radius: 4px;
+    border: 1px solid var(--border);
+    display: inline-flex; align-items: center; justify-content: center;
+    font-size: 18px; color: var(--text-muted);
+  }
+
+  /* Buttons */
+  .btn {
+    display: inline-flex; align-items: center; gap: 8px;
+    padding: 12px 28px; border-radius: 8px;
+    font-size: 14px; font-weight: 700;
+    cursor: pointer; border: none; transition: all 0.2s;
+    font-family: 'Noto Sans TC', sans-serif;
+  }
+  .btn-primary { background: var(--accent); color: #fff; }
+  .btn-primary:hover:not(:disabled) { background: #1f3f2b; transform: translateY(-1px); box-shadow: 0 4px 16px rgba(45,90,61,0.3); }
+  .btn-primary:disabled { opacity: 0.4; cursor: not-allowed; transform: none; }
+  .btn-secondary { background: var(--surface); color: var(--text); border: 1px solid var(--border); }
+  .btn-secondary:hover { background: var(--surface2); }
+
+  .action-bar {
+    display: flex; align-items: center; justify-content: space-between;
+    margin-top: 24px; flex-wrap: wrap; gap: 12px;
+  }
+  .action-info { font-size: 13px; color: var(--text-muted); }
+
+  /* Progress overlay */
+  .progress-overlay {
+    display: none; position: fixed; inset: 0;
+    background: rgba(0,0,0,0.5); backdrop-filter: blur(4px);
+    z-index: 100; align-items: center; justify-content: center;
+  }
+  .progress-overlay.show { display: flex; }
+  .progress-box {
+    background: var(--surface); border-radius: var(--radius);
+    padding: 40px; text-align: center; min-width: 320px;
+    box-shadow: 0 20px 60px rgba(0,0,0,0.2);
+  }
+  .spinner {
+    width: 48px; height: 48px; margin: 0 auto 20px;
+    border: 3px solid var(--border);
+    border-top-color: var(--accent);
+    border-radius: 50%;
+    animation: spin 0.8s linear infinite;
+  }
+  @keyframes spin { to { transform: rotate(360deg); } }
+  .progress-text { font-size: 15px; font-weight: 600; margin-bottom: 6px; }
+  .progress-sub  { font-size: 13px; color: var(--text-muted); }
+
+  /* Toast */
+  .toast {
+    position: fixed; bottom: 32px; right: 32px;
+    padding: 14px 20px; border-radius: 10px;
+    font-size: 14px; font-weight: 500; color: #fff;
+    box-shadow: 0 8px 24px rgba(0,0,0,0.15);
+    transform: translateY(80px); opacity: 0;
+    transition: all 0.3s cubic-bezier(0.34,1.56,0.64,1);
+    z-index: 200; max-width: 360px;
+  }
+  .toast.show { transform: translateY(0); opacity: 1; }
+  .toast.success { background: var(--success); }
+  .toast.error   { background: var(--danger); }
+
+  .section-hidden { display: none; }
+
+  .summary-chips {
+    display: flex; gap: 8px; flex-wrap: wrap; margin-top: 12px;
+  }
+  .chip {
+    background: var(--surface2); border: 1px solid var(--border);
+    border-radius: 20px; padding: 4px 12px;
+    font-size: 12px; color: var(--text-muted);
+  }
+  .chip strong { color: var(--text); }
+
+  /* 自動抓圖提示 */
+  .auto-img-note {
+    display: flex; align-items: center; gap: 10px;
+    background: var(--accent-light);
+    border: 1px solid #b2d4bb;
+    border-radius: 8px;
+    padding: 12px 16px;
+    font-size: 13px;
+    color: var(--accent);
+    margin-bottom: 20px;
+  }
+</style>
+</head>
+<body>
+
+<header>
+  <div class="logo">
+    <div class="logo-icon">📊</div>
+    商品上架結構表產生器
+  </div>
+  <div class="header-sub">v2.0 · 自動抓圖版</div>
+</header>
+
+<div class="container">
+
+  <!-- Steps -->
+  <div class="steps">
+    <div class="step active" id="step1">
+      <div class="step-num">1</div>
+      <div class="step-text">上傳資料檔</div>
+    </div>
+    <div class="step" id="step2">
+      <div class="step-num">2</div>
+      <div class="step-text">確認並產生 Excel</div>
+    </div>
+  </div>
+
+  <!-- Step 1: Excel upload -->
+  <div class="card" id="card-excel">
+    <div class="card-title"><span>📁</span> 步驟一：上傳原始資料檔</div>
+    <div class="card-desc">上傳系統匯出的採購資料 Excel，圖片將自動從系統連結下載，不需手動上傳。</div>
+    <div class="upload-zone" id="excel-zone">
+      <input type="file" id="excel-input" accept=".xlsx,.xls">
+      <div class="upload-icon">📄</div>
+      <div class="upload-text">點擊或拖曳 Excel 檔案至此</div>
+      <div class="upload-sub">.xlsx / .xls</div>
+    </div>
+    <div id="excel-badge" style="display:none"></div>
+    <div class="action-bar">
+      <div class="action-info" id="parse-info"></div>
+      <button class="btn btn-primary" id="btn-parse" disabled>解析資料 →</button>
+    </div>
+  </div>
+
+  <!-- Step 2: Preview + Generate -->
+  <div id="section-step2" class="section-hidden">
+
+    <div class="card">
+      <div class="card-title"><span>🔍</span> 商品預覽</div>
+      <div class="auto-img-note">
+        🖼️ 圖片將於產生時自動從系統下載，無須手動上傳
+      </div>
+      <div class="summary-chips" id="summary-chips"></div>
+      <div class="preview-wrap" style="margin-top:16px">
+        <table id="preview-table">
+          <thead>
+            <tr>
+              <th>圖片預覽</th>
+              <th>商品編號</th>
+              <th>款號</th>
+              <th>中分類</th>
+              <th>週別</th>
+              <th>上架日期</th>
+              <th>顏色</th>
+              <th>網路級別</th>
+            </tr>
+          </thead>
+          <tbody id="preview-body"></tbody>
+        </table>
+      </div>
+    </div>
+
+    <!-- Generate -->
+    <div class="card">
+      <div class="card-title"><span>⚡</span> 步驟二：產生 Excel</div>
+      <div class="card-desc">確認商品清單無誤後，點擊下方按鈕。系統將自動下載所有商品圖片並產生格式化的結構表。</div>
+      <div class="action-bar">
+        <div class="action-info" id="gen-info">準備就緒</div>
+        <div style="display:flex;gap:10px">
+          <button class="btn btn-secondary" id="btn-reset">重新上傳</button>
+          <button class="btn btn-primary" id="btn-generate">🚀 自動抓圖並產生 Excel</button>
+        </div>
+      </div>
+    </div>
+
+  </div>
+
+</div>
+
+<!-- Progress overlay -->
+<div class="progress-overlay" id="progress">
+  <div class="progress-box">
+    <div class="spinner"></div>
+    <div class="progress-text" id="progress-text">處理中...</div>
+    <div class="progress-sub" id="progress-sub">請稍候</div>
+  </div>
+</div>
+
+<!-- Toast -->
+<div class="toast" id="toast"></div>
+
+<script>
+let productsData = [];
+let excelFile = null;
+
+function showToast(msg, type='success') {
+  const t = document.getElementById('toast');
+  t.textContent = msg;
+  t.className = `toast ${type} show`;
+  setTimeout(() => t.classList.remove('show'), 3500);
+}
+
+function showProgress(text, sub='請稍候') {
+  document.getElementById('progress-text').textContent = text;
+  document.getElementById('progress-sub').textContent = sub;
+  document.getElementById('progress').classList.add('show');
+}
+
+function hideProgress() {
+  document.getElementById('progress').classList.remove('show');
+}
+
+function setStep(n) {
+  for (let i = 1; i <= 2; i++) {
+    const el = document.getElementById(`step${i}`);
+    el.classList.remove('active','done');
+    if (i < n) el.classList.add('done');
+    else if (i === n) el.classList.add('active');
+  }
+}
+
+function gradeBadge(g) {
+  const map = { 'A':'badge-a','B':'badge-b','C':'badge-c' };
+  return `<span class="badge ${map[g]||'badge-other'}">${g}</span>`;
+}
+
+// Drag & Drop
+const excelZone = document.getElementById('excel-zone');
+excelZone.addEventListener('dragover', e => { e.preventDefault(); excelZone.classList.add('drag-over'); });
+excelZone.addEventListener('dragleave', () => excelZone.classList.remove('drag-over'));
+excelZone.addEventListener('drop', e => {
+  e.preventDefault(); excelZone.classList.remove('drag-over');
+  const file = e.dataTransfer.files[0];
+  if (file) handleExcelFile(file);
+});
+
+document.getElementById('excel-input').addEventListener('change', e => {
+  if (e.target.files[0]) handleExcelFile(e.target.files[0]);
+});
+
+function handleExcelFile(file) {
+  excelFile = file;
+  const badge = document.getElementById('excel-badge');
+  badge.style.display = 'block';
+  badge.innerHTML = `<div class="file-badge">📄 ${file.name} <span style="color:var(--text-muted);font-size:11px">${(file.size/1024).toFixed(0)} KB</span></div>`;
+  document.getElementById('btn-parse').disabled = false;
+  document.getElementById('parse-info').textContent = '已選擇檔案，點擊「解析資料」繼續';
+}
+
+// Parse
+document.getElementById('btn-parse').addEventListener('click', async () => {
+  if (!excelFile) return;
+  showProgress('解析資料中...', '讀取 Excel 欄位與商品清單');
+
+  const fd = new FormData();
+  fd.append('excel', excelFile);
+
+  try {
+    const res = await fetch('/api/preview', { method:'POST', body: fd });
+    const data = await res.json();
+    hideProgress();
+    if (data.error) { showToast(data.error, 'error'); return; }
+
+    productsData = data.products;
+    renderPreview(data.products);
+    document.getElementById('section-step2').classList.remove('section-hidden');
+    setStep(2);
+    document.getElementById('section-step2').scrollIntoView({ behavior:'smooth', block:'start' });
+    showToast(`成功解析 ${data.count} 件商品 ✓`);
+  } catch(e) {
+    hideProgress();
+    showToast('解析失敗，請確認檔案格式', 'error');
+  }
+});
+
+// Render Preview（含圖片縮圖）
+function renderPreview(products) {
+  const tbody = document.getElementById('preview-body');
+  tbody.innerHTML = '';
+  products.forEach(p => {
+    const imgHtml = p.img_url
+      ? `<img class="img-thumb" src="${p.img_url}" alt="${p.style}" onerror="this.outerHTML='<div class=\\'img-placeholder\\'>📷</div>'">`
+      : `<div class="img-placeholder">📷</div>`;
+    const tr = document.createElement('tr');
+    tr.innerHTML = `
+      <td>${imgHtml}</td>
+      <td><span style="font-family:'DM Mono',monospace;font-size:12px">${p.prod_id}</span></td>
+      <td><strong>${p.style}</strong></td>
+      <td>${p.category}</td>
+      <td><span style="font-family:'DM Mono',monospace">${p.week}</span></td>
+      <td>${p.date}</td>
+      <td>${p.colors.map(c=>`<span style="font-size:12px;margin-right:4px">▪ ${c}</span>`).join('')}</td>
+      <td>${gradeBadge(p.grade)}</td>
+    `;
+    tbody.appendChild(tr);
+  });
+
+  const chips = document.getElementById('summary-chips');
+  const week = products[0]?.week || '';
+  const total_rows = products.reduce((a,p)=>a+p.total_rows,0);
+  const hasImg = products.filter(p=>p.img_url).length;
+  chips.innerHTML = `
+    <div class="chip">週別 <strong>${week}</strong></div>
+    <div class="chip">商品 <strong>${products.length} 件</strong></div>
+    <div class="chip">資料列 <strong>${total_rows} 列</strong></div>
+    <div class="chip">有圖片連結 <strong>${hasImg} 件</strong></div>
+  `;
+}
+
+// Reset
+document.getElementById('btn-reset').addEventListener('click', () => {
+  excelFile = null;
+  productsData = [];
+  document.getElementById('excel-input').value = '';
+  document.getElementById('excel-badge').style.display = 'none';
+  document.getElementById('btn-parse').disabled = true;
+  document.getElementById('parse-info').textContent = '';
+  document.getElementById('section-step2').classList.add('section-hidden');
+  setStep(1);
+  window.scrollTo({ top:0, behavior:'smooth' });
+});
+
+// Generate
+document.getElementById('btn-generate').addEventListener('click', async () => {
+  if (!excelFile || productsData.length === 0) {
+    showToast('請先上傳並解析 Excel 檔案', 'error'); return;
+  }
+
+  const total = productsData.length;
+  showProgress('下載商品圖片中...', `共 ${total} 件商品，請耐心等候`);
+  setStep(2);
+
+  const fd = new FormData();
+  fd.append('excel', excelFile);
+
+  // 由瀏覽器抓取圖片（瀏覽器在內網，可以存取圖片伺服器）
+  let fetched = 0;
+  for (const p of productsData) {
+    if (!p.img_url) continue;
+    try {
+      const imgRes = await fetch(p.img_url);
+      if (imgRes.ok) {
+        const blob = await imgRes.blob();
+        fd.append(`img_${p.style}`, blob, `${p.style}.png`);
+        fetched++;
+        document.getElementById('progress-sub').textContent =
+          `已下載 ${fetched} / ${total} 張圖片`;
+      }
+    } catch(e) {
+      // 抓不到就跳過
+    }
+  }
+
+  document.getElementById('progress-text').textContent = '產生 Excel 中...';
+  document.getElementById('progress-sub').textContent = '即將完成，請稍候';
+
+  try {
+    const res = await fetch('/api/generate', { method:'POST', body: fd });
+    hideProgress();
+    if (!res.ok) {
+      const err = await res.json();
+      showToast(err.error || '產生失敗', 'error');
+      setStep(2); return;
+    }
+    const blob = await res.blob();
+    const cd = res.headers.get('Content-Disposition') || '';
+    const match = cd.match(/filename\*?=(?:UTF-8'')?(.+)/i);
+    let fname = match ? decodeURIComponent(match[1].replace(/"/g,'')) : 'output.xlsx';
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url; a.download = fname; a.click();
+    URL.revokeObjectURL(url);
+    showToast(`✅ Excel 已產生！（含 ${fetched} 張圖片）`);
+  } catch(e) {
+    hideProgress();
+    showToast('網路錯誤，請重試', 'error');
+    setStep(2);
+  }
+});
+</script>
+</body>
+</html>

@@ -1,0 +1,6 @@
+﻿flask
+openpyxl
+pillow
+pandas
+requests
+gunicorn
