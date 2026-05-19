@@ -521,20 +521,34 @@ document.getElementById('btn-generate').addEventListener('click', async () => {
 
   // 由瀏覽器抓取圖片（瀏覽器在內網，可以存取圖片伺服器）
   let fetched = 0;
+  let failed = 0;
+  let failReasons = [];
   for (const p of productsData) {
     if (!p.img_url) continue;
     try {
-      const imgRes = await fetch(p.img_url);
+      const imgRes = await fetch(p.img_url, {mode: 'cors', credentials: 'omit'});
       if (imgRes.ok) {
         const blob = await imgRes.blob();
         fd.append(`img_${p.style}`, blob, `${p.style}.png`);
         fetched++;
         document.getElementById('progress-sub').textContent =
           `已下載 ${fetched} / ${total} 張圖片`;
+      } else {
+        failed++;
+        failReasons.push(`${p.style}: HTTP ${imgRes.status}`);
       }
     } catch(e) {
-      // 抓不到就跳過
+      failed++;
+      failReasons.push(`${p.style}: ${e.message}`);
     }
+  }
+  console.log(`圖片下載結果：成功 ${fetched} 張，失敗 ${failed} 張`);
+  if (failReasons.length > 0) console.log('失敗原因：', failReasons);
+  if (fetched === 0 && failed > 0) {
+    hideProgress();
+    showToast(`⚠️ 圖片下載失敗（${failReasons[0]}），Excel 將不含圖片`, 'error');
+    await new Promise(r => setTimeout(r, 2000));
+    showProgress('產生 Excel 中（無圖片版本）...', '請稍候');
   }
 
   document.getElementById('progress-text').textContent = '產生 Excel 中...';
