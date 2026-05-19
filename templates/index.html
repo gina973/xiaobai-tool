@@ -570,7 +570,7 @@ document.getElementById('btn-generate').addEventListener('click', async () => {
     const a = document.createElement('a');
     a.href = url; a.download = fname; a.click();
     URL.revokeObjectURL(url);
-    showToast(`✅ Excel 已產生！（含 ${fetched} 張圖片）`);
+    showToast(`✅ Excel 已產生！瀏覽器抓到 ${fetched} 張 / 失敗 ${failed} 張`);
   } catch(e) {
     hideProgress();
     showToast('網路錯誤，請重試', 'error');

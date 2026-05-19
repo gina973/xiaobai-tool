@@ -238,6 +238,8 @@ def generate():
 
     # 優先使用瀏覽器傳來的圖片，若沒有則嘗試從 URL 下載
     images_map = {}
+    all_keys = [k for k in request.files.keys()]
+    print(f"[DEBUG] 收到的檔案 keys: {all_keys}")
     for key, img_file in request.files.items():
         if key == 'excel':
             continue
@@ -247,12 +249,17 @@ def generate():
             pil_img.save(buf, format='PNG')
             style_name = key.replace('img_', '', 1)
             images_map[style_name] = buf.getvalue()
-        except Exception:
-            pass
+            print(f"[DEBUG] 成功處理圖片: {style_name}")
+        except Exception as e:
+            print(f"[DEBUG] 圖片處理失敗 {key}: {e}")
+
+    print(f"[DEBUG] 總共處理圖片數: {len(images_map)}")
 
     # 沒收到圖片才嘗試從 URL 下載（備用）
     if not images_map:
+        print("[DEBUG] 嘗試從 URL 下載圖片")
         images_map = fetch_images(products)
+    print(f"[DEBUG] 最終圖片數: {len(images_map)}")
 
     try:
         out_buf = build_excel(products, images_map)
