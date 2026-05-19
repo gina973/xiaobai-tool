@@ -252,30 +252,27 @@ def generate():
         try: os.unlink(tmp.name)
         except: pass
 
-    # 優先使用瀏覽器傳來的圖片，若沒有則嘗試從 URL 下載
-    images_map = {}
-    all_keys = [k for k in request.files.keys()]
-    print(f"[DEBUG] 收到的檔案 keys: {all_keys}")
-    for key, img_file in request.files.items():
-        if key == 'excel':
-            continue
-        try:
-            pil_img = PILImage.open(img_file.stream).convert('RGB')
-            buf = io.BytesIO()
-            pil_img.save(buf, format='PNG')
-            style_name = key.replace('img_', '', 1)
-            images_map[style_name] = buf.getvalue()
-            print(f"[DEBUG] 成功處理圖片: {style_name}")
-        except Exception as e:
-            print(f"[DEBUG] 圖片處理失敗 {key}: {e}")
+    # 優先讓伺服器直接從 URL 下載圖片（伺服器在內網，可以存取圖片伺服器）
+    print("[INFO] 開始從 URL 下載圖片...")
+    images_map = fetch_images(products)
+    print(f"[INFO] 伺服器直接下載：共取得 {len(images_map)} 張圖片")
 
-    print(f"[DEBUG] 總共處理圖片數: {len(images_map)}")
-
-    # 沒收到圖片才嘗試從 URL 下載（備用）
+    # 若伺服器下載失敗（例如在外部雲端），改用瀏覽器傳來的圖片
     if not images_map:
-        print("[DEBUG] 嘗試從 URL 下載圖片")
-        images_map = fetch_images(products)
-    print(f"[DEBUG] 最終圖片數: {len(images_map)}")
+        print("[INFO] 伺服器下載失敗，改用瀏覽器上傳的圖片")
+        for key, img_file in request.files.items():
+            if key == 'excel':
+                continue
+            try:
+                pil_img = PILImage.open(img_file.stream).convert('RGB')
+                buf = io.BytesIO()
+                pil_img.save(buf, format='PNG')
+                style_name = key.replace('img_', '', 1)
+                images_map[style_name] = buf.getvalue()
+                print(f"[INFO] 瀏覽器圖片: {style_name}")
+            except Exception as e:
+                print(f"[WARN] 圖片處理失敗 {key}: {e}")
+        print(f"[INFO] 瀏覽器上傳圖片：共取得 {len(images_map)} 張")
 
     try:
         out_buf = build_excel(products, images_map)

@@ -349,7 +349,7 @@
     <!-- Generate -->
     <div class="card">
       <div class="card-title"><span>⚡</span> 步驟二：產生 Excel</div>
-      <div class="card-desc">確認商品清單無誤後，點擊下方按鈕。系統將自動下載所有商品圖片並產生格式化的結構表。</div>
+      <div class="card-desc">確認商品清單無誤後，點擊下方按鈕。伺服器會自動從系統連結下載所有商品圖片並產生格式化的結構表（圖片較多時需等候約 10–30 秒）。</div>
       <div class="action-bar">
         <div class="action-info" id="gen-info">準備就緒</div>
         <div style="display:flex;gap:10px">
@@ -513,48 +513,11 @@ document.getElementById('btn-generate').addEventListener('click', async () => {
   }
 
   const total = productsData.length;
-  showProgress('下載商品圖片中...', `共 ${total} 件商品，請耐心等候`);
+  showProgress('產生 Excel 中...', `伺服器自動下載 ${total} 件商品圖片，請耐心等候`);
   setStep(2);
 
   const fd = new FormData();
   fd.append('excel', excelFile);
-
-  // 由瀏覽器抓取圖片（瀏覽器在內網，可以存取圖片伺服器）
-  let fetched = 0;
-  let failed = 0;
-  let failReasons = [];
-  for (const p of productsData) {
-    if (!p.img_url) continue;
-    try {
-      // 透過伺服器 proxy 抓圖，避免 CORS 問題
-      const proxyUrl = `/api/proxy-image?url=${encodeURIComponent(p.img_url)}`;
-      const imgRes = await fetch(proxyUrl);
-      if (imgRes.ok) {
-        const blob = await imgRes.blob();
-        fd.append(`img_${p.style}`, blob, `${p.style}.png`);
-        fetched++;
-        document.getElementById('progress-sub').textContent =
-          `已下載 ${fetched} / ${total} 張圖片`;
-      } else {
-        failed++;
-        failReasons.push(`${p.style}: HTTP ${imgRes.status}`);
-      }
-    } catch(e) {
-      failed++;
-      failReasons.push(`${p.style}: ${e.message}`);
-    }
-  }
-  console.log(`圖片下載結果：成功 ${fetched} 張，失敗 ${failed} 張`);
-  if (failReasons.length > 0) console.log('失敗原因：', failReasons);
-  if (fetched === 0 && failed > 0) {
-    hideProgress();
-    showToast(`⚠️ 圖片下載失敗（${failReasons[0]}），Excel 將不含圖片`, 'error');
-    await new Promise(r => setTimeout(r, 2000));
-    showProgress('產生 Excel 中（無圖片版本）...', '請稍候');
-  }
-
-  document.getElementById('progress-text').textContent = '產生 Excel 中...';
-  document.getElementById('progress-sub').textContent = '即將完成，請稍候';
 
   try {
     const res = await fetch('/api/generate', { method:'POST', body: fd });
@@ -572,7 +535,7 @@ document.getElementById('btn-generate').addEventListener('click', async () => {
     const a = document.createElement('a');
     a.href = url; a.download = fname; a.click();
     URL.revokeObjectURL(url);
-    showToast(`✅ Excel 已產生！瀏覽器抓到 ${fetched} 張 / 失敗 ${failed} 張`);
+    showToast('✅ Excel 已產生並下載完成！');
   } catch(e) {
     hideProgress();
     showToast('網路錯誤，請重試', 'error');
